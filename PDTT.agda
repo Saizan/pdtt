@@ -191,7 +191,7 @@ postulate
 {-# REWRITE `Bool-El #-}
 
 open import Data.Sum
-module IsBool (f : (X : U ⁼) → El X → El X -> El X) (A : U) (a b : El (ι A)) where
+module IsBool' (f : (X : U ⁼) → El X → El X -> El X) (A : U) (a b : El (ι A)) where
 
   g : Bool → El (ι A)
   g false = a
@@ -204,12 +204,13 @@ module IsBool (f : (X : U ⁼) → El X → El X -> El X) (A : U) (a b : El (ι 
   _─_.eq0 isbool' = refl
   _─_.eq1 isbool' = refl
 
+module IsBool (f : (X : U ⁼) → El X → El X -> El X) (A : U) where
+  open IsBool' f A
 
-  isbool : (a ─ f (ι A) a b) ⊎ (b ─ f (ι A) a b)
+  isbool : (∀ a b → a ─ f (ι A) a b) ⊎ (∀ a b → b ─ f (ι A) a b)
   isbool with (f (ι `Bool) false true) | isbool'
-  isbool | false | z = inj₁ z
-  isbool | true  | z = inj₂ z
-
+  isbool | false | f-is-a = inj₁ f-is-a
+  isbool | true  | f-is-b = inj₂ f-is-b
 
 open import Data.Nat
 postulate
