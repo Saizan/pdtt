@@ -11,7 +11,7 @@ postulate
   El : U ⁼ -> Set
 
 El⁼ : _ -> _
-El⁼ = \ x → (El x) ⁼
+El⁼ = λ x → (El x) ⁼
 
 
 postulate
@@ -33,6 +33,12 @@ postulate
   `∀ : (A : U) → (B : El (ι A) → U) → U
   `∀-El : ∀ {A : U}{B : El (ι A) → U} → El (ι (`∀ A B)) ≡ ((x : El⁼ (ι A)) → El (=-elim B x))
 
+syntax `Π A (λ a → B) = `Π[ a ∈ A ] B
+syntax `∀ A (λ a → B) = `∀[ a ∈ A ] B
+
+_`→_ : (A B : U) → U
+A `→ B = `Π[ _ ∈ A ] B
+
 {-# REWRITE `Π-El #-}
 {-# REWRITE `∀-El #-}
 
@@ -48,10 +54,13 @@ postulate
   ∫∫-beta : ∀ {A B} f a → ∫∫-elim {A} {B} f (σ a) ≡ σ (f a)
 
   `Σ : (A : U) → (B : El (ι A) → U) → U
-  `Σ-El : ∀ {A B} → El (ι (`Σ A B)) ≡ Σ (El (ι A)) \ x → El (ι (B x))
+  `Σ-El : ∀ {A B} → El (ι (`Σ A B)) ≡ Σ (El (ι A)) λ x → El (ι (B x))
 
   `∃ : (A : U) → (B : El (ι A) → U) → U
-  `∃-El : ∀ {A B} → El (ι (`∃ A B)) ≡ (∫ (Σ (El⁼ (ι A)) (\ x → El (=-elim B x))))
+  `∃-El : ∀ {A B} → El (ι (`∃ A B)) ≡ (∫ (Σ (El⁼ (ι A)) (λ x → El (=-elim B x))))
+
+syntax `Σ A (λ a → B) = `Σ[ a ∈ A ] B
+syntax `∃ A (λ a → B) = `∃[ a ∈ A ] B
 
 
 {-# REWRITE `Σ-El #-}
@@ -99,7 +108,7 @@ record _─_ {A : Set} (x y : A) : Set where
      eq1 : path i1 ≡ y
 
 thePath : i0 ─ i1
-_─_.path thePath = \ x → x
+_─_.path thePath = λ x → x
 _─_.eq0 thePath  = refl
 _─_.eq1 thePath  = refl
 
@@ -111,7 +120,7 @@ _⌢_.eq1 (under (con path eq0 eq1)) = eq1
 
 
 IsPath : ∀ {A : Set}{x y : A} → x ⌢ y → Set
-IsPath b = Σ (_ ─ _) \ p → under p ≡ b
+IsPath b = Σ (_ ─ _) λ p → under p ≡ b
 
 -- postulate
 --   path-ext : {A : El (ι 𝔹) → U} (let A0 = El (ι (A b0)); A1 = El (ι (A b1)))
@@ -148,20 +157,20 @@ id : (X : U ⁼) → El X → El X
 id _ x = x
 
 postulate
-  lemma : ∀ (Y : U ⁼) → El (=-elim (λ X → `Π X (λ _ → X)) Y) ≡ ((x : El Y) -> El Y)
+  lemma : ∀ (Y : U ⁼) → El (=-elim (λ X → (X `→ X)) Y) ≡ ((x : El Y) -> El Y)
 
 {-# REWRITE lemma #-}
-foo : (Y : U ⁼) → El (ι (`∃ `U \ X → `Π X (\ _ → X)))
-foo = \ Y → σ (Y , id Y )
+paired-param-id : (Y : U ⁼) → El (ι (`∃[ X ∈ `U ] (X `→ X)))
+paired-param-id Y = σ (Y , id Y )
 
-bar : ∀ {A B} → (f : El (ι A) → El (ι B)) → foo (ι A) ─ foo (ι B)
-_─_.path (bar {A} {B} f) i = foo (=-elim ((⌢-univ {A} {B} f)) i)
-_─_.eq0 (bar {A} {B} f) = refl
-_─_.eq1 (bar {A} {B} f) = refl
+paired-param-id-paths : ∀ {A B} → (f : El (ι A) → El (ι B)) → paired-param-id (ι A) ─ paired-param-id (ι B)
+_─_.path (paired-param-id-paths {A} {B} f) i = paired-param-id (=-elim ((⌢-univ {A} {B} f)) i)
+_─_.eq0 (paired-param-id-paths {A} {B} f) = refl
+_─_.eq1 (paired-param-id-paths {A} {B} f) = refl
 
 
-baz : {A B : U} → (El (ι A) → El (ι B)) → σ (ι A , (λ x → x)) ─ σ (ι B , (λ x → x))
-baz = bar
+paired-param-id-paths' : {A B : U} → (El (ι A) → El (ι B)) → σ (ι A , (λ x → x)) ─ σ (ι B , (λ x → x))
+paired-param-id-paths' = paired-param-id-paths
 
 open import Data.Unit
 
@@ -171,16 +180,18 @@ postulate
 
 {-# REWRITE `⊤-El #-}
 
-module IsId (f : (X : U ⁼) → El X → El X) where
+module IsId (f : (X : U ⁼) → El X → El X) (A : U) (a : El (ι A)) where
 
+  g : ⊤ → El (ι A)
+  g _ = a
 
-  isid : ∀ A a → a ─ f (ι A) a
-  _─_.path (isid A a) = let â : ⊤ → El (ι A)
-                            â _ = a
-                            X = ⌢-univ {`⊤} {A} â
-                         in λ i → pull {`⊤} {A} â i (f (=-elim X i) (push {`⊤} {A} â i _))
-  _─_.eq0 (isid A a) = refl
-  _─_.eq1 (isid A a) = refl
+  X : El (ι 𝔹) → U
+  X = ⌢-univ {`⊤} {A} g
+
+  isid : a ─ f (ι A) a
+  _─_.path isid = λ i → pull {`⊤} {A} g i (f (=-elim X i) (push {`⊤} {A} g i tt))
+  _─_.eq0 isid = refl
+  _─_.eq1 isid = refl
 
 open import Data.Bool
 
@@ -200,7 +211,7 @@ module IsBool' (f : (X : U ⁼) → El X → El X -> El X) (A : U) (a b : El (ι
   X = ⌢-univ {`Bool} {A} g
 
   isbool' : g (f (ι `Bool) false true) ─ f (ι A) a b
-  _─_.path isbool' = \ i → pull {`Bool} {A} g i (f (=-elim X i) (push {`Bool} {A} g i false) (push {`Bool} {A} g i true))
+  _─_.path isbool' = λ i → pull {`Bool} {A} g i (f (=-elim X i) (push {`Bool} {A} g i false) (push {`Bool} {A} g i true))
   _─_.eq0 isbool' = refl
   _─_.eq1 isbool' = refl
 
@@ -229,7 +240,7 @@ module IsNat (f : (X : U ⁼) → El X → (El X -> El X) -> El X) (A : U) (a0 :
   g (suc n) = as (g n)
 
   ImG : U
-  ImG = `Σ `ℕ (λ n → `Σ A \ a → _`≡_ {ι A} (g n) a)
+  ImG = `Σ `ℕ (λ n → `Σ A λ a → _`≡_ {ι A} (g n) a)
 
   p1 : El (ι ImG) -> ℕ
   p1 (n , _) = n
