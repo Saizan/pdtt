@@ -48,7 +48,6 @@ _─_.path (paired-param-id-paths {A} {B} f) i = paired-param-id (=-elim ((⌢-u
 _─_.eq0 (paired-param-id-paths {A} {B} f) = refl
 _─_.eq1 (paired-param-id-paths {A} {B} f) = refl
 
-
 paired-param-id-paths' : {A B : U} → (El (ι A) → El (ι B)) → σ (ι A , (λ x → x)) ─ σ (ι B , (λ x → x))
 paired-param-id-paths' = paired-param-id-paths
 
@@ -103,8 +102,6 @@ postulate
   ⌢ext : {A : El (ι 𝔹) → Set} {B : (i : El (ι 𝔹)) → A i → Set} (f0 : (a : A b0) → B b0 a) (f1 : (a : A b1) → B b1 a)
     → {!!}
 -}
-
-{-
 module IsNat (f : (X : U ⁼) → El X → (El X -> El X) -> El X) (A : U) (a0 : El (ι A)) (as : El (ι A) → El (ι A)) where
 
   g : ℕ → El (ι A)
@@ -128,4 +125,3 @@ module IsNat (f : (X : U ⁼) → El X → (El X -> El X) -> El X) (A : U) (a0 :
   postulate
     foo2 : p2 (f (ι ImG) img0 img1) ─ f (ι A) a0 as
     foo1 : p1 (f (ι ImG) img0 img1) ─ f (ι `ℕ) zero suc
--}
