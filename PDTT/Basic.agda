@@ -48,6 +48,7 @@ postulate
   ∫ : Set → Set
   σ : ∀ {A} → A → ∫ A
   ∫∫-elim : ∀ {A}{B : ∫ A → Set} → ((x : A) → B (σ x)) → (x : ∫ A ) → ∫ (B x)
+  -- shouldnt we write A → ∫ B?
   ∫-elim : ∀ {A}{B : ∫ A → U ⁼} → ((x : A) → El (B (σ x))) → (x : ∫ A ) → El (B x)
   ∫-beta : ∀ {A B} f a → ∫-elim {A} {B} f (σ a) ≡ f a
 
