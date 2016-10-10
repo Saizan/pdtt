@@ -18,7 +18,8 @@ postulate
   
 infix 5 _⊢_
 
-postulate --Substitutions-------------------
+--Substitutions-------------------
+postulate
   Sub : Ctx → Ctx → Set
   id : ∀{Γ} → Sub Γ Γ
   _∘_ : ∀{Θ Δ Γ} → Sub Δ Γ → Sub Θ Δ → Sub Θ Γ
@@ -43,7 +44,8 @@ postulate
 infixr 15 _∘_
 infix 10 _T[_] _[_]
 
-postulate --Context extension---------------
+--Context extension---------------
+postulate 
   _„_∈_ : (Γ : Ctx) → Var → Ty Γ → Ctx  --\glqq
   π : ∀{Γ x} → {T : Ty Γ} → Sub (Γ „ x ∈ T) Γ
   ξ : ∀{Γ} → (x : Var) → {T : Ty Γ} → Γ „ x ∈ T ⊢ T T[ π ]
@@ -52,20 +54,20 @@ postulate --Context extension---------------
 {-# REWRITE π∘„ #-}
 postulate
   ξ[„] : ∀{Δ Γ x T} → {σ : Sub Δ Γ} → {t : Δ ⊢ T T[ σ ]} → ξ x [ σ „ T ∋ t / x ] ≡ t
-  --π„ξ : ∀{Δ Γ x T} → {τ : Sub Δ (Γ „ x ∈ T)} → (π ∘ τ „ T ∋ ξ x [ τ ] / x) ≡ τ
-  --„∘ : ∀{Θ Δ Γ x T} → {σ : Sub Δ Γ} → {t : Δ ⊢ T T[ σ ]} → {τ : Sub Θ Δ} → (σ „ T ∋ t / x) ∘ τ ≡ σ ∘ τ „ T ∋ t [ τ ] / x
+  π„ξ : ∀{Δ Γ x T} → {τ : Sub Δ (Γ „ x ∈ T)} → (π ∘ τ „ T ∋ ξ x [ τ ] / x) ≡ τ
+  „∘ : ∀{Θ Δ Γ x T} → {σ : Sub Δ Γ} → {t : Δ ⊢ T T[ σ ]} → {τ : Sub Θ Δ} → (σ „ T ∋ t / x) ∘ τ ≡ σ ∘ τ „ T ∋ t [ τ ] / x
 {-# REWRITE ξ[„] #-}
---{-# REWRITE π„ξ #-}
---{-# REWRITE „∘ #-}
+{-# REWRITE π„ξ #-}
+{-# REWRITE „∘ #-}
 
 {-
 test1 : ∀{Δ Γ x T} → {σ : Sub Δ Γ} → {t : Δ ⊢ T T[ σ ]} → ξ x [ σ „ T ∋ t / x ] ≡ t
 test1 = refl
 test2 : ∀{Δ x T} → {t : Δ ⊢ T} → ξ x [ id „ T ∋ t / x ] ≡ t
-test2 = refl-}
+test2 = refl
 test3 : ∀{Δ Γ x S} → {σ : Sub Δ Γ} → {t : Δ ⊢ S T[ σ ]} → ξ x [ id „ S T[ σ ] ∋ t / x ] ≡ t
 test3 {Δ}{Γ}{x}{S}{σ}{t} = refl --test2{Δ}{x}{S T[ σ ]}{t}
-
+-}
 
 --ξ y [ id „ S T[ σ ] ∋ s [ σ ] / y ]
 
