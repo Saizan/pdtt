@@ -139,16 +139,32 @@ postulate
 
 c♯ : Ctx → Ctx
 cι : ∀{Γ} → Sub Γ (c♯ Γ)
-postulate
-  T♯ : ∀{Γ} → Ty Γ → Ty (c♯ Γ)
-  t♯ : ∀{Γ T} → Γ ⊢ T → c♯ Γ ⊢ T♯ T
 
-♯_ : {Φ : CtxVar} → AbsTy Φ → AbsTy Φ
-♯_ {Φ} T = T♯ {•} (λ Ψ → λ {• → {!!}}) Φ {!cι Φ !}
---ι_ : ∀{Φ} → {T : AbsTy Φ} → AbsTm Φ T → AbsTm Φ (♯ T)
---ι_ {Φ}{T} t = {!!}
+postulate
+  abs♯ : ∀{Φ} → AbsTy Φ → AbsTy Φ
+  T♯ : ∀{Γ} → Ty Γ → Ty (c♯ Γ)
+  T♯[ι] : ∀{Γ Φ} → {γ : AbsSub Φ Γ} → {T : Ty Γ} → T♯ T Φ (cι Φ γ) ≡ abs♯ (T Φ γ)
+{-# REWRITE T♯[ι] #-}
+
+♯ : ∀{Γ} → Ty Γ → Ty Γ
+♯ T Φ γ = abs♯ (T Φ γ)
+
+T♯[ι]' : ∀{Γ} → {T : Ty Γ} → (T♯ T) T[ cι ] ≡ ♯ T
+T♯[ι]' = refl
+
+postulate
+  absι : ∀{Γ Φ} → (γ : AbsSub Φ Γ) → (T : Ty Γ) → AbsTm Φ (T Φ γ) → AbsTm Φ (abs♯ (T Φ γ))
+  t♯ : ∀{Γ T} → Γ ⊢ T → c♯ Γ ⊢ T♯ T
+  t♯[ι] : ∀{Γ Φ} → {γ : AbsSub Φ Γ} → {T : Ty Γ} → {t : Γ ⊢ T} → t♯ t Φ (cι Φ γ) ≡ absι γ T (t Φ γ)
+{-# REWRITE t♯[ι] #-}
+
+ι : ∀{Γ} → {T : Ty Γ} → (t : Γ ⊢ T) → Γ ⊢ ♯ T
+ι {Γ}{T} t Φ γ = absι γ T (t Φ γ)
+
+t♯[ι]' : ∀{Γ} → {T : Ty Γ} → {t : Γ ⊢ T} → (t♯ t) [ cι ] ≡ ι t
+t♯[ι]' = refl
 
 c♯ • = •
 c♯ (Γ „ x ∈ T) = c♯ Γ „ x ∈ T♯ T
 cι {•} Φ _ = •
-cι {Γ „ .x ∈ .T} Φ (γ “ T ∋ t / x) = (cι Φ γ) “ T♯ T ∋ {!!} / x
+cι {Γ „ .x ∈ .T} Φ (γ “ T ∋ t / x) = (cι Φ γ) “ T♯ T ∋ absι γ T t / x
