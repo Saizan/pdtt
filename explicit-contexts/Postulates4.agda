@@ -6,11 +6,17 @@ open import Data.Product
 open import Data.Nat
 open import Data.Unit
 open import Relation.Binary.PropositionalEquality hiding ([_])
+open ≡-Reasoning
 open import Function renaming (id to idf ; _∘_ to _f∘_)
 {-# BUILTIN REWRITE _≡_ #-}
 
 postulate
   funext : {A : Set } {B : A → Set} {f g : (x : A) → B x} → (∀ x → f x ≡ g x) → f ≡ g
+  
+map≡ : {A B : Set} (f : A → B) → ∀{x y} → x ≡ y → f x ≡ f y
+map≡ f refl = refl
+sym≡ : {A : Set} → {x y : A} → x ≡ y → y ≡ x
+sym≡ refl = refl
 
 --=================================
 --CONTEXTS, SUBSTITUTIONS AND TYPES
@@ -55,6 +61,11 @@ postulate
 κ'𝔹 : ∀{v Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ v
 κ'𝔹 {#} i = ι𝔹 i
 κ'𝔹 {♭} i = i
+
+ι'𝔹∘κ'𝔹 : ∀{v Φ} → {i : Abs𝔹 Φ ♭} → ι'𝔹 (κ'𝔹 {v} i) ≡ ι𝔹 i
+ι'𝔹∘κ'𝔹 {#} = refl
+ι'𝔹∘κ'𝔹 {♭} = refl
+{-# REWRITE ι'𝔹∘κ'𝔹 #-}
 
 _i⊥t_ : ∀{Φ T} → Abs𝔹 Φ # → AbsTm Φ T # → Set
 ai i⊥t at = at t⊥i ai
@@ -131,9 +142,11 @@ postulate
   sub#-∘ : ∀{Θ Δ Γ Φ} → {τ : Sub Θ Δ} → {σ : Sub Δ Γ} → {θ : AbsSub Φ (c# Θ)}
     → (sub# σ) Φ (sub# τ Φ θ) ≡ sub# (σ ∘ τ) Φ θ 
   cι-nat : ∀{Δ Γ} → {σ : Sub Δ Γ} → ∀{Φ} → {δ : AbsSub Φ Δ} → sub# σ Φ (cι Φ δ) ≡ (cι ∘ σ) Φ δ
+  sub## : ∀{Δ Γ} → {σ : Sub Δ Γ} → sub# (sub# σ) ≡ sub# σ
 {-# REWRITE sub#-id #-}
 {-# REWRITE sub#-∘ #-}
 {-# REWRITE cι-nat #-}
+{-# REWRITE sub## #-}
 
 _T[_] : {Δ Γ : Ctx} → Ty Γ → Sub Δ Γ → Ty Δ
 T T[ σ ] = λ Φ → λ δ → T Φ (sub# σ Φ δ)
@@ -174,8 +187,77 @@ _!id : ∀{v Δ Γ xi} → (σ : Sub Δ Γ) → Sub (Δ ! xi ∈𝔹 v) (Γ ! xi
 _!u : ∀{Δ Γ xi} → (σ : Sub Δ Γ) → Sub (Δ ! xi ∈𝔹 ♭) (Γ ! xi ∈𝔹 #)
 (σ !u) Φ (δ !𝔹 .♭ ∋ i / xi & o) = (σ Φ δ) !𝔹 # ∋ ι𝔹 i / xi & σ⊥i σ δ o
 
+--==================================
+--FLAT
+--==================================
+
+c♭ : Ctx → Ctx
+postulate
+  c#♭ : ∀{Γ} → c# (c♭ Γ) ≡ c# Γ
+{-# REWRITE c#♭ #-}
+c♭ • = •
+c♭ (Γ „ x ∈ T ^ v) = c♭ Γ „ x ∈ T ^ ♭
+c♭ (Γ ! x ∈𝔹 v) = c♭ Γ ! x ∈𝔹 ♭
+
+cκ : ∀{Γ} → Sub (c♭ Γ) Γ
+postulate
+  cι∘cκ : ∀{Γ Φ} → {γ : AbsSub Φ (c♭ Γ)} → cι Φ (cκ{Γ} Φ γ) ≡ cι Φ γ
+{-# REWRITE cι∘cκ #-}
+cκ {•} Φ • = •
+cκ {Γ „ .x ∈ .T ^ v} Φ (γ “ T ^ .♭ ∋ t / x) = (cκ Φ γ) “ T ^ v ∋ κ'atm t / x
+cκ {Γ ! .xi ∈𝔹 v} Φ (γ !𝔹 .♭ ∋ β / xi & o) = (cκ Φ γ) !𝔹 v ∋ (κ'𝔹 β) / xi & σ⊥i cκ γ o
+
+postulate
+  sub♭ : ∀{Δ Γ} → Sub Δ Γ → Sub (c♭ Δ) (c♭ Γ)
+  sub♭-id : ∀{Γ Φ} → {γ : AbsSub Φ (c♭ Γ)} → sub♭ id Φ γ ≡ γ
+  sub♭-∘ : ∀{Θ Δ Γ Φ} → {τ : Sub Θ Δ} → {σ : Sub Δ Γ} → {θ : AbsSub Φ (c♭ Θ)}
+    → (sub♭ σ) Φ (sub♭ τ Φ θ) ≡ sub♭ (σ ∘ τ) Φ θ 
+  cκ-nat : ∀{Δ Γ} → {σ : Sub Δ Γ} → ∀{Φ} → {δ : AbsSub Φ (c♭ Δ)} → cκ Φ (sub♭ σ Φ δ) ≡ σ Φ (cκ Φ δ)
+{-# REWRITE sub♭-id #-}
+{-# REWRITE sub♭-∘ #-}
+--{-# REWRITE cκ-nat #-}
+
+--=====================================
+--Universe
+--=====================================
+
+postulate
+  ATU : (n : ℕ) → ∀{Φ} → AbsTy Φ
+
+TU : (Γ : Ctx) → (n : ℕ) → Ty Γ
+TU Γ n Φ γ = ATU n
+TU[] : ∀{n Δ Γ} → {σ : Sub Δ Γ} → TU Γ n T[ σ ] ≡ TU Δ n
+TU[] = refl
+
+
+postulate
+  tX : Var
+  TEl0 : ∀{n} → Ty (• „ tX ∈ TU • n ^ #)
+--  ATEl : ∀{Φ n} → AbsTm Φ (ATU n) ♭ → AbsTy Φ
+
+TEl : ∀{n Γ} → (tA : Γ ⊢ TU Γ n ^ ♭) → Ty Γ
+TEl {n}{Γ} tA Φ γ = (TEl0 T[ sub# ((λ Ψ γ' → •) „ TU • n ^ ♭ ∋ tA / tX) ]) Φ γ
+--TEl : ∀{n Γ} → (tA : c♭ Γ ⊢ TU (c♭ Γ) n ^ ♭) → Ty Γ
+--TEl {n}{Γ} tA Φ γ = ATEl (tA Φ {!!})
+
+TEl[] : ∀{n Δ Γ} → {σ : Sub Δ Γ} → {tA : Γ ⊢ TU Γ n ^ ♭} → (TEl tA) T[ σ ] ≡ TEl (TU Γ n ∋ tA [ σ ])
+TEl[] {n}{Δ}{Γ}{σ}{tA} = funext (λ Φ → funext (λ δ → map≡ (TEl0 Φ) (
+    begin
+      sub# (sub# (λ Φ₁ δ₁ → • “ (λ Φ₂ γ → ATU n) ^ ♭ ∋ tA Φ₁ δ₁ / tX)) Φ (sub# σ Φ δ)
+    ≡⟨ map≡ (λ τ → τ Φ (sub# σ Φ δ)) (sub## {_}{_}{λ Φ₁ δ₁ → • “ (λ Φ₂ γ → ATU n) ^ ♭ ∋ tA Φ₁ δ₁ / tX}) ⟩
+      sub# (λ Φ₁ θ → • “ (λ Φ₂ γ → ATU n) ^ ♭ ∋ tA Φ₁ (σ Φ₁ θ) / tX) Φ δ
+    ≡⟨ sym≡ (map≡ (λ τ → τ Φ δ) (sub## {_}{_} {λ Φ₁ δ₁ → • “ (λ Φ₂ γ → ATU n) ^ ♭ ∋ tA Φ₁ (σ Φ₁ δ₁) / tX})) ⟩
+      sub# (sub# (λ Φ₁ δ₁ → • “ (λ Φ₂ γ → ATU n) ^ ♭ ∋ tA Φ₁ (σ Φ₁ δ₁) / tX)) Φ δ
+    ∎
+  )))
+--THIS SHOULDN'T BE NECESSARY 
+
 {-
---THINKING ABOUT TYPES:
---define functoriality of ♭
---There will be mutual dependencies between these things.
+TEl : ∀{n Γ} → (tA : c♭ Γ ⊢ TU (c♭ Γ) n ^ ♭) → Ty Γ
+TEl {n}{Γ} tA Φ γ = (TEl0 T[ sub# ((λ Ψ γ' → •) „ TU • n ^ ♭ ∋ tA / tX) ]) Φ γ
+--TEl : ∀{n Γ} → (tA : c♭ Γ ⊢ TU (c♭ Γ) n ^ ♭) → Ty Γ
+--TEl {n}{Γ} tA Φ γ = ATEl (tA Φ {!!})
+
+TEl[] : ∀{n Δ Γ} → {σ : Sub Δ Γ} → {tA : c♭ Γ ⊢ TU (c♭ Γ) n ^ ♭} → (TEl tA) T[ σ ] ≡ TEl (TU (c♭ Γ) n ∋ tA [ sub♭ σ ])
+TEl[] = {!!}
 -}
