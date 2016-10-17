@@ -32,13 +32,13 @@ postulate
   AbsTm : (Φ : CtxVar) → (T : AbsTy Φ) → Variance → Set -- Think of this as the set of terms Ω ⊢ T ^ v
   Abs𝔹 : CtxVar → Variance → Set -- Think of this as the set of presheaf maps Ω → 𝔹
   absι : ∀{Φ T} → AbsTm Φ T ♭ → AbsTm Φ T #
-  absu : ∀{Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ #
+  absι𝔹 : ∀{Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ #
   absend : ∀{Φ} → Endpoint → Abs𝔹 Φ ♭
   _t⊥i_ : ∀{Φ T} → AbsTm Φ T # → Abs𝔹 Φ # → Set
   _i⊥i_ : ∀{Φ} → (ai aj : Abs𝔹 Φ #) → Set
   i⊥i-sym : ∀{Φ} → {ai aj : Abs𝔹 Φ #} → ai i⊥i aj → aj i⊥i ai
-  t⊥end : ∀{Φ T e} → {at : AbsTm Φ T #} → at t⊥i absu (absend e)
-  i⊥end : ∀{Φ e} → {ai : Abs𝔹 Φ #} → ai i⊥i absu (absend e)
+  t⊥end : ∀{Φ T e} → {at : AbsTm Φ T #} → at t⊥i absι𝔹 (absend e)
+  i⊥end : ∀{Φ e} → {ai : Abs𝔹 Φ #} → ai i⊥i absι𝔹 (absend e)
 
 absι' : ∀{v Φ T} → AbsTm Φ T v → AbsTm Φ T #
 absι' {♭} at = absι at
@@ -48,13 +48,13 @@ absκ' : ∀{v Φ T} → AbsTm Φ T ♭ → AbsTm Φ T v
 absκ' {#} at = absι at
 absκ' {♭} at = at
 
-absu-in : ∀{v Φ} → Abs𝔹 Φ v → Abs𝔹 Φ #
-absu-in {♭} i = absu i
-absu-in {#} i = i
+absι'𝔹 : ∀{v Φ} → Abs𝔹 Φ v → Abs𝔹 Φ #
+absι'𝔹 {♭} i = absι𝔹 i
+absι'𝔹 {#} i = i
 
-absu-out : ∀{v Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ v
-absu-out {#} i = absu i
-absu-out {♭} i = i
+absκ'𝔹 : ∀{v Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ v
+absκ'𝔹 {#} i = absι𝔹 i
+absκ'𝔹 {♭} i = i
 
 _i⊥t_ : ∀{Φ T} → Abs𝔹 Φ # → AbsTm Φ T # → Set
 ai i⊥t at = at t⊥i ai
@@ -68,27 +68,27 @@ Ty Γ = (Φ : CtxVar) → (γ : AbsSub Φ Γ) → AbsTy Φ
 
 data Ctx where
   • : Ctx --\bu
-  _„_∈_~_ : (Γ : Ctx) → Var → (T : Ty Γ) → Variance → Ctx
+  _„_∈_^_ : (Γ : Ctx) → Var → (T : Ty Γ) → Variance → Ctx
   _!_∈𝔹_ : (Γ : Ctx) → IVar → Variance → Ctx
 
 data AbsSub Φ where
   • : AbsSub Φ •
-  _“_~_∋_/_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (T : Ty Γ) → (v : Variance) → (t : AbsTm Φ (T Φ γ) v) →
-    (x : Var) → AbsSub Φ (Γ „ x ∈ T ~ v)
+  _“_^_∋_/_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (T : Ty Γ) → (v : Variance) → (t : AbsTm Φ (T Φ γ) v) →
+    (x : Var) → AbsSub Φ (Γ „ x ∈ T ^ v)
   _!𝔹_∋_/_&_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (v : Variance) → (β : Abs𝔹 Φ v) → (xi : IVar) →
-    (γ ⊥i absu-in β) → AbsSub Φ (Γ ! xi ∈𝔹 v)
+    (γ ⊥i absι'𝔹 β) → AbsSub Φ (Γ ! xi ∈𝔹 v)
 
 _⊥i_ {Γ = •} γ j = ⊤
-_⊥i_ {Γ = Γ „ .x ∈ .S ~ .v} (γ “ S ~ v ∋ as / x) aj = (γ ⊥i aj) × (absι' as t⊥i aj)
-_⊥i_ {Γ = Γ ! .xi ∈𝔹 .v} (γ !𝔹 v ∋ ai / xi & _) aj = (γ ⊥i aj) × (absu-in ai i⊥i aj)
+_⊥i_ {Γ = Γ „ .x ∈ .S ^ .v} (γ “ S ^ v ∋ as / x) aj = (γ ⊥i aj) × (absι' as t⊥i aj)
+_⊥i_ {Γ = Γ ! .xi ∈𝔹 .v} (γ !𝔹 v ∋ ai / xi & _) aj = (γ ⊥i aj) × (absι'𝔹 ai i⊥i aj)
 
-⊥end : ∀{Φ Γ e} → (γ : AbsSub Φ Γ) → γ ⊥i absu (absend e)
+⊥end : ∀{Φ Γ e} → (γ : AbsSub Φ Γ) → γ ⊥i absι𝔹 (absend e)
 ⊥end {Γ = •} γ = tt
-⊥end {Φ}{Γ „ .x ∈ T ~ .v}{e} (γ “ .T ~ v ∋ t / x) = ⊥end γ , t⊥end
+⊥end {Φ}{Γ „ .x ∈ T ^ .v}{e} (γ “ .T ^ v ∋ t / x) = ⊥end γ , t⊥end
 ⊥end {Φ}{Γ = Γ ! .x ∈𝔹 .v}{e} (γ !𝔹 v ∋ β / x & o) = ⊥end γ , i⊥end
 
-infix 10 _“_~_∋_/_
-infix 8 _„_∈_~_
+infix 10 _“_^_∋_/_
+infix 8 _„_∈_^_
 
 Sub : Ctx → Ctx → Set
 Sub Δ Γ = (Φ : CtxVar) → AbsSub Φ Δ → AbsSub Φ Γ
@@ -118,28 +118,34 @@ postulate
 --================================
 --TERMS AND SUBSTITUTION EXTENSION
 --================================
-infix 5 _⊢_~_
-_⊢_~_ : (Γ : Ctx) → Ty Γ → Variance → Set -- set of terms of T v
-Γ ⊢ T ~ v = (Φ : CtxVar) → (γ : AbsSub Φ Γ) → AbsTm Φ (T Φ γ) v
+infix 5 _⊢_^_
+_⊢_^_ : (Γ : Ctx) → Ty Γ → Variance → Set -- set of terms of T v
+Γ ⊢ T ^ v = (Φ : CtxVar) → (γ : AbsSub Φ Γ) → AbsTm Φ (T Φ γ) v
 --Think of this as Γ ⊢ T = ∀ Ω . (γ : Sub Ω Γ) → Ω ⊢ T[γ]
 
-_[_] : ∀{v Δ Γ} → {T : Ty Γ} → (Γ ⊢ T ~ v) → (σ : Sub Δ Γ) → (Δ ⊢ T T[ σ ] ~ v)
+_[_] : ∀{v Δ Γ} → {T : Ty Γ} → (Γ ⊢ T ^ v) → (σ : Sub Δ Γ) → (Δ ⊢ T T[ σ ] ^ v)
 t [ σ ] = λ Φ δ → t Φ (σ Φ δ)
-[id] : ∀{v Γ} → {T : Ty Γ} → {t : Γ ⊢ T ~ v} → t [ id ] ≡ t
+[id] : ∀{v Γ} → {T : Ty Γ} → {t : Γ ⊢ T ^ v} → t [ id ] ≡ t
 [id] = refl
-[][] : ∀{v Θ Δ Γ} → {T : Ty Γ} → {t : Γ ⊢ T ~ v} → {σ : Sub Δ Γ} → {τ : Sub Θ Δ} → t [ σ ] [ τ ] ≡ t [ σ ∘ τ ]
+[][] : ∀{v Θ Δ Γ} → {T : Ty Γ} → {t : Γ ⊢ T ^ v} → {σ : Sub Δ Γ} → {τ : Sub Θ Δ} → t [ σ ] [ τ ] ≡ t [ σ ∘ τ ]
 [][] = refl
 
-infix 10 _„_~_∋_/_ _!𝔹_∋_/_
-_„_~_∋_/_ : ∀ {Δ Γ} → (σ : Sub Δ Γ) → (T : Ty Γ) → (v : Variance) →  Δ ⊢ T T[ σ ] ~ v → (x : Var) → Sub Δ (Γ „ x ∈ T ~ v)
-(σ „ T ~ v ∋ t / x) Φ δ = (σ Φ δ) “ T ~ v ∋ (t Φ δ) / x
+infix 10 _„_^_∋_/_ _!𝔹_∋_/_
+_„_^_∋_/_ : ∀ {Δ Γ} → (σ : Sub Δ Γ) → (T : Ty Γ) → (v : Variance) →  Δ ⊢ T T[ σ ] ^ v → (x : Var) → Sub Δ (Γ „ x ∈ T ^ v)
+(σ „ T ^ v ∋ t / x) Φ δ = (σ Φ δ) “ T ^ v ∋ (t Φ δ) / x
 
 _!𝔹_∋_/_ : ∀ {Δ Γ} → (σ : Sub Δ Γ) → (v : Variance) → (e : Endpoint) → (xi : IVar) → Sub Δ (Γ ! xi ∈𝔹 v)
-(σ !𝔹 ♭ ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 ♭ ∋ absu-out (absend e) / xi & ⊥end (σ Φ δ)
-(σ !𝔹 # ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 # ∋ absu-out (absend e) / xi & ⊥end (σ Φ δ)
+(σ !𝔹 ♭ ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 ♭ ∋ absκ'𝔹 (absend e) / xi & ⊥end (σ Φ δ)
+(σ !𝔹 # ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 # ∋ absκ'𝔹 (absend e) / xi & ⊥end (σ Φ δ)
 
 _!id : ∀{v Δ Γ xi} → (σ : Sub Δ Γ) → Sub (Δ ! xi ∈𝔹 v) (Γ ! xi ∈𝔹 v)
 (σ !id) Φ (δ !𝔹 v ∋ i / xi & o) = (σ Φ δ) !𝔹 v ∋ i / xi & σ⊥i σ δ o
 
 _!u : ∀{Δ Γ xi} → (σ : Sub Δ Γ) → Sub (Δ ! xi ∈𝔹 ♭) (Γ ! xi ∈𝔹 #)
-(σ !u) Φ (δ !𝔹 .♭ ∋ i / xi & o) = (σ Φ δ) !𝔹 # ∋ absu i / xi & σ⊥i σ δ o
+(σ !u) Φ (δ !𝔹 .♭ ∋ i / xi & o) = (σ Φ δ) !𝔹 # ∋ absι𝔹 i / xi & σ⊥i σ δ o
+
+--THINKING ABOUT TYPES:
+--let AbsTy Φ be the types over #Ω.
+--let Ty Γ be the types over #Γ
+--define functoriality of # and ♭
+--There will be mutual dependencies between these things.
