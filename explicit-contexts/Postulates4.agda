@@ -52,6 +52,8 @@ postulate
 
 data Mention : Var → Set where
   mention : (x : Var) → Mention x
+data IMention : IVar → Set where
+  imention : (xi : IVar) → IMention xi
 
 postulate
   cv♭♭ : ∀{Φ} → cv♭ (cv♭ Φ) ≡ cv♭ Φ
@@ -100,8 +102,9 @@ c# : Ctx → Ctx
 postulate
   c## : ∀{Γ} → c# (c# Γ) ≡ c# Γ
 {-# REWRITE c## #-}
---AbsSub : (Φ : CtxVar) → (Γ : Ctx) → Set
-data AbsSub (Φ : CtxVar) : Ctx → Set
+AbsSubCore : (Φ : CtxVar) → (Γ : Ctx) → Set
+data AbsSub (Φ : CtxVar) (Γ : Ctx) : Set where
+  absSub : AbsSubCore Φ Γ → AbsSub Φ Γ
 
 Sub : Ctx → Ctx → Set
 Sub Δ Γ = (Φ : CtxVar) → AbsSub Φ Δ → AbsSub Φ Γ
@@ -113,9 +116,9 @@ id Φ γ = γ
 _∘_ : ∀{Θ Δ Γ} → Sub Δ Γ → Sub Θ Δ → Sub Θ Γ
 (σ ∘ τ) Φ θ = σ Φ (τ Φ θ)
 
-_⊢_⊥i_ : ∀ Φ {Γ} → (γ : AbsSub Φ Γ) → (i : Abs𝔹 Φ #) → Set
+_⊢_∋_⊥i_ : ∀ Φ Γ → (γ : AbsSub Φ Γ) → (i : Abs𝔹 Φ #) → Set
 postulate
-  σ⊥i : ∀{Φ Δ Γ} → (σ : Sub Δ Γ) → (δ : AbsSub Φ Δ) → {i : Abs𝔹 Φ #} → (Φ ⊢ δ ⊥i i) → (Φ ⊢ σ Φ δ ⊥i i)
+  σ⊥i : ∀{Φ Δ Γ} → (σ : Sub Δ Γ) → (δ : AbsSub Φ Δ) → {i : Abs𝔹 Φ #} → (Φ ⊢ _ ∋ δ ⊥i i) → (Φ ⊢ _ ∋ σ Φ δ ⊥i i)
 
 Ty : Ctx → Set
 Ty Γ = (Φ : CtxVar) → (γ : AbsSub Φ (c# Γ)) → AbsTy Φ
@@ -133,15 +136,46 @@ cι : ∀{Γ} → Sub Γ (c# Γ)
 postulate
   cι# : ∀{Γ} → cι {c# Γ} ≡ id
 {-# REWRITE cι# #-}
---AbsSub = ?
 
+AbsSubCore Φ • = ⊤
+AbsSubCore Φ (Γ „ x ∈ T ^ v) = Σ[ γ ∈ AbsSub Φ Γ ] (AbsTm Φ (T Φ (cι {Γ} Φ γ)) v × Mention x)
+AbsSubCore Φ (Γ ! xi ∈𝔹 v) = Σ[ γ ∈ AbsSub Φ Γ ] Σ[ i,xi ∈ Abs𝔹 Φ v × IMention xi ] (Φ ⊢ Γ ∋ γ ⊥i ι'𝔹 Φ (proj₁ i,xi))
+
+⊙ : ∀{Φ} → AbsSub Φ •
+⊙ = absSub tt
+pattern pat⊙ = absSub tt 
+_“_^_∋_/_ : ∀ {Φ Γ} → (γ : AbsSub Φ Γ) → (T : Ty Γ) → (v : Variance) → (t : AbsTm Φ (T Φ (cι {Γ} Φ γ)) v) →
+  (x : Var) → AbsSub Φ (Γ „ x ∈ T ^ v)
+γ “ T ^ v ∋ t / x = absSub (γ , t , mention x)
+pattern pat_“_/_ γ t x = absSub (γ , t , mention x)
+_!𝔹_∋_/_&_ : ∀ {Φ Γ} → (γ : AbsSub Φ Γ) → (v : Variance) → (i : Abs𝔹 Φ v) → (xi : IVar) →
+  (Φ ⊢ Γ ∋ γ ⊥i ι'𝔹 Φ i) → AbsSub Φ (Γ ! xi ∈𝔹 v)
+γ !𝔹 v ∋ i / xi & o = absSub (γ , (i , imention xi) , o)
+pattern pat_!_/_&_ γ i xi o = absSub (γ , (i , imention xi) , o)
+
+{-
 data AbsSub Φ where
   • : AbsSub Φ •
   _“_^_∋_/_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (T : Ty Γ) → (v : Variance) → (t : AbsTm Φ (T Φ (cι Φ γ)) v) →
     (x : Var) → AbsSub Φ (Γ „ x ∈ T ^ v)
   _!𝔹_∋_/_&_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (v : Variance) → (β : Abs𝔹 Φ v) → (xi : IVar) →
     .(Φ ⊢ γ ⊥i ι'𝔹 Φ β) → AbsSub Φ (Γ ! xi ∈𝔹 v)
-  
+-}
+
+cι {•} Φ pat⊙ = ⊙
+cι {Γ „ .x ∈ T ^ v} Φ (pat γ “ t / x) = (cι Φ γ) “ T ^ # ∋ ι'atm Φ t / x
+cι {Γ ! .xi ∈𝔹 v} Φ (pat γ ! i / xi & o) = (cι Φ γ) !𝔹 # ∋ (ι'𝔹 Φ i) / xi & σ⊥i cι γ o
+
+Φ ⊢ • ∋ γ ⊥i j = ⊤
+Φ ⊢ Γ „ .x ∈ S ^ v ∋ (pat γ “ as / x) ⊥i aj = (Φ ⊢ Γ ∋ γ ⊥i aj) × (Φ ⊢ ι'atm Φ as t⊥i aj)
+Φ ⊢ Γ ! .xi ∈𝔹 v ∋ (pat γ ! ai / xi & _) ⊥i aj = (Φ ⊢ Γ ∋ γ ⊥i aj) × (Φ ⊢ ι'𝔹 Φ ai i⊥i aj)
+
+⊥end : ∀ Φ Γ e → (γ : AbsSub Φ Γ) → Φ ⊢ Γ ∋ γ ⊥i ι𝔹 Φ (end𝔹 Φ e)
+⊥end Φ • e pat⊙ = tt
+⊥end Φ (Γ „ .x ∈ T ^ v) e (pat γ “ t / x) = ⊥end Φ Γ e γ , t⊥end
+⊥end Φ (Γ ! .xi ∈𝔹 v) e (pat γ ! i / xi & o) = ⊥end Φ Γ e γ , i⊥end
+
+{-
 cι {•} Φ • = •
 cι {Γ „ .x ∈ .T ^ .v} Φ (γ “ T ^ v ∋ t / x) = (cι Φ γ) “ T ^ # ∋ ι'atm Φ t / x
 cι {Γ ! .xi ∈𝔹 .v} Φ (γ !𝔹 v ∋ β / xi & o) = (cι Φ γ) !𝔹 # ∋ (ι'𝔹 Φ β) / xi & σ⊥i cι γ o
@@ -149,11 +183,7 @@ cι {Γ ! .xi ∈𝔹 .v} Φ (γ !𝔹 v ∋ β / xi & o) = (cι Φ γ) !𝔹 # 
 _⊢_⊥i_ Φ {Γ = •} γ j = ⊤
 _⊢_⊥i_ Φ {Γ = Γ „ .x ∈ .S ^ .v} (γ “ S ^ v ∋ as / x) aj = (Φ ⊢ γ ⊥i aj) × (Φ ⊢ ι'atm Φ as t⊥i aj)
 _⊢_⊥i_ Φ {Γ = Γ ! .xi ∈𝔹 .v} (γ !𝔹 v ∋ ai / xi & _) aj = (Φ ⊢ γ ⊥i aj) × (Φ ⊢ ι'𝔹 Φ ai i⊥i aj)
-
-⊥end : ∀{Φ Γ e} → (γ : AbsSub Φ Γ) → Φ ⊢ γ ⊥i ι𝔹 Φ (end𝔹 Φ e)
-⊥end {Γ = •} γ = tt
-⊥end {Φ}{Γ „ .x ∈ T ^ .v}{e} (γ “ .T ^ v ∋ t / x) = ⊥end γ , t⊥end
-⊥end {Φ}{Γ = Γ ! .x ∈𝔹 .v}{e} (γ !𝔹 v ∋ β / x & o) = ⊥end γ , i⊥end
+-}
 
 infix 10 _“_^_∋_/_
 infix 8 _„_∈_^_
@@ -169,11 +199,25 @@ id∘ = refl
 --FUNCTORIALITY OF #
 --=================================
 
-AbsSub♭ : ∀{Φ Γ} → AbsSub (cv♭ Φ) Γ ≡ AbsSub Φ (c# Γ)
-AbsSub♭ {Φ}{•} = {!!}
-AbsSub♭ {Φ}{Γ „ x ∈ T ^ v} = {!!}
-AbsSub♭ {Φ}{Γ ! x ∈𝔹 v} = {!!}
+♭⊣#>> : ∀{Φ Γ} → AbsSub (cv♭ Φ) Γ → AbsSub Φ (c# Γ)
+{-
+{-
+  We have
+  ♭Φ —[γ]→ Γ —[ι]→ #Γ ←[>>γ]— Φ
+  Applying #, we get
+  #Φ —[#γ]→ #Γ —[id]→ #Γ ←[#γ]— #Φ
+  Since types always live in #(the given context), we can assume that
+  the left-branch substitution equals the right-branch one for types.
+-}
+postulate
+  simplify-out♭ : ∀{Φ Γ} → {T : Ty Γ} → {γ : AbsSub (cv♭ Φ) Γ} → (T Φ (♭⊣#>> γ)) ≡ (T (cv♭ Φ) (cι (cv♭ Φ) γ) [out♭])
+{-# REWRITE simplify-out♭ #-}
+-}
+♭⊣#>> {Φ}{•} pat⊙ = ⊙
+♭⊣#>> {Φ}{Γ „ x ∈ T ^ v} (pat γ “ t / .x) = ♭⊣#>> γ “ T ^ # ∋ {!!} / x 
+♭⊣#>> {Φ}{Γ ! xi ∈𝔹 v} (pat γ ! i / .xi & o) = ♭⊣#>> γ !𝔹 # ∋ {!!} / xi & {!!}
 
+{-
 postulate
   sub# : ∀{Δ Γ} → Sub Δ Γ → Sub (c# Δ) (c# Γ)
   sub#-id : ∀{Γ Φ} → {γ : AbsSub Φ (c# Γ)} → sub# id Φ γ ≡ γ
@@ -310,4 +354,5 @@ TEl {n}{Γ} tA Φ γ = (TEl0 T[ sub# ((λ Ψ γ' → •) „ TU • n ^ ♭ ∋
 
 TEl[] : ∀{n Δ Γ} → {σ : Sub Δ Γ} → {tA : c♭ Γ ⊢ TU (c♭ Γ) n ^ ♭} → (TEl tA) T[ σ ] ≡ TEl (TU (c♭ Γ) n ∋ tA [ sub♭ σ ])
 TEl[] = {!!}
+-}
 -}
