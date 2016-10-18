@@ -34,47 +34,73 @@ postulate
   Var : Set -- set of variables; if you prefer to ignore variables, think of this as Unit
   IVar : Set -- same, but for the interval
   CtxVar : Set -- set of context variables.
+  cv♭ : CtxVar → CtxVar -- if Φ denotes Ω, then cv♭ Φ denotes ♭Ω
+  cv∫ : CtxVar → CtxVar -- if Φ denotes Ω, then cv∫ Φ denotes ∫Ω
   AbsTy : CtxVar → Set -- Think of this as TyDisc(#Ω)
+  _[out∫] : ∀{Φ} → AbsTy (cv∫ Φ) → AbsTy Φ -- There is a substitution #ς : #Ω → #∫Ω
+  _[out♭] : ∀{Φ} → AbsTy (cv♭ Φ) → AbsTy Φ -- There is a substitution id : #Ω → #♭Ω
   AbsTm : (Φ : CtxVar) → (T : AbsTy Φ) → Variance → Set -- Think of this as the set of terms Ω ⊢ T ^ v
   Abs𝔹 : CtxVar → Variance → Set -- Think of this as the set of presheaf maps Ω → 𝔹
-  ιatm : ∀{Φ T} → AbsTm Φ T ♭ → AbsTm Φ T #
-  ι𝔹 : ∀{Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ #
-  end𝔹 : ∀{Φ} → Endpoint → Abs𝔹 Φ ♭
-  _t⊥i_ : ∀{Φ T} → AbsTm Φ T # → Abs𝔹 Φ # → Set
-  _i⊥i_ : ∀{Φ} → (ai aj : Abs𝔹 Φ #) → Set
-  i⊥i-sym : ∀{Φ} → {ai aj : Abs𝔹 Φ #} → ai i⊥i aj → aj i⊥i ai
-  t⊥end : ∀{Φ T e} → {at : AbsTm Φ T #} → at t⊥i ι𝔹 (end𝔹 e)
-  i⊥end : ∀{Φ e} → {ai : Abs𝔹 Φ #} → ai i⊥i ι𝔹 (end𝔹 e)
+  ιatm : ∀ Φ {T} → AbsTm Φ T ♭ → AbsTm Φ T #
+  ι𝔹 : ∀ Φ → Abs𝔹 Φ ♭ → Abs𝔹 Φ #
+  end𝔹 : ∀ Φ → Endpoint → Abs𝔹 Φ ♭
+  _⊢_t⊥i_ : ∀ Φ {T} → AbsTm Φ T # → Abs𝔹 Φ # → Set
+  _⊢_i⊥i_ : ∀ Φ → (ai aj : Abs𝔹 Φ #) → Set
+  i⊥i-sym : ∀{Φ} → {ai aj : Abs𝔹 Φ #} → Φ ⊢ ai i⊥i aj → Φ ⊢ aj i⊥i ai
+  t⊥end : ∀{Φ T e} → {at : AbsTm Φ T #} → Φ ⊢ at t⊥i ι𝔹 Φ (end𝔹 Φ e)
+  i⊥end : ∀{Φ e} → {ai : Abs𝔹 Φ #} → Φ ⊢ ai i⊥i ι𝔹 Φ (end𝔹 Φ e)
 
-ι'atm : ∀{v Φ T} → AbsTm Φ T v → AbsTm Φ T #
-ι'atm {♭} at = ιatm at
-ι'atm {#} at = at
+data Mention : Var → Set where
+  mention : (x : Var) → Mention x
 
-κ'atm : ∀{v Φ T} → AbsTm Φ T ♭ → AbsTm Φ T v
-κ'atm {#} at = ιatm at
-κ'atm {♭} at = at
+postulate
+  cv♭♭ : ∀{Φ} → cv♭ (cv♭ Φ) ≡ cv♭ Φ
+  cv♭∫ : ∀{Φ} → cv♭ (cv∫ Φ) ≡ cv∫ Φ
+  cv∫♭ : ∀{Φ} → cv∫ (cv♭ Φ) ≡ cv♭ Φ -- this really is only an isomorphism but meh.
+  cv∫∫ : ∀{Φ} → cv∫ (cv∫ Φ) ≡ cv∫ Φ -- this really is only an isomorphism but meh.
+  AbsTm♭ : ∀{Φ T v} → AbsTm (cv♭ Φ) T v ≡ AbsTm Φ (T [out♭]) #
+  AbsTm∫ : ∀{Φ T v} → AbsTm (cv∫ Φ) T v ≡ AbsTm Φ (T [out∫]) ♭
+  Abs𝔹♭ : ∀{Φ v} → Abs𝔹 (cv♭ Φ) v ≡ Abs𝔹 Φ #
+  Abs𝔹∫ : ∀{Φ v} → Abs𝔹 (cv∫ Φ) v ≡ Abs𝔹 Φ ♭
+{-# REWRITE cv♭♭ #-}
+{-# REWRITE cv♭∫ #-}
+{-# REWRITE cv∫♭ #-}
+{-# REWRITE cv∫∫ #-}
+{-# REWRITE AbsTm♭ #-}
+{-# REWRITE AbsTm∫ #-}
+{-# REWRITE Abs𝔹♭ #-}
+{-# REWRITE Abs𝔹∫ #-}
 
-ι'𝔹 : ∀{v Φ} → Abs𝔹 Φ v → Abs𝔹 Φ #
-ι'𝔹 {♭} i = ι𝔹 i
-ι'𝔹 {#} i = i
+ι'atm : ∀{v} Φ {T} → AbsTm Φ T v → AbsTm Φ T #
+ι'atm {♭} Φ at = ιatm Φ at
+ι'atm {#} Φ at = at
 
-κ'𝔹 : ∀{v Φ} → Abs𝔹 Φ ♭ → Abs𝔹 Φ v
-κ'𝔹 {#} i = ι𝔹 i
-κ'𝔹 {♭} i = i
+κ'atm : ∀{v} Φ {T} → AbsTm Φ T ♭ → AbsTm Φ T v
+κ'atm {#} Φ at = ιatm Φ at
+κ'atm {♭} Φ at = at
 
-ι'𝔹∘κ'𝔹 : ∀{v Φ} → {i : Abs𝔹 Φ ♭} → ι'𝔹 (κ'𝔹 {v} i) ≡ ι𝔹 i
+ι'𝔹 : ∀{v} Φ → Abs𝔹 Φ v → Abs𝔹 Φ #
+ι'𝔹 {♭} Φ i = ι𝔹 Φ i
+ι'𝔹 {#} Φ i = i
+
+κ'𝔹 : ∀{v} Φ → Abs𝔹 Φ ♭ → Abs𝔹 Φ v
+κ'𝔹 {#} Φ i = ι𝔹 Φ i
+κ'𝔹 {♭} Φ i = i
+
+ι'𝔹∘κ'𝔹 : ∀{v Φ} → {i : Abs𝔹 Φ ♭} → ι'𝔹 Φ (κ'𝔹 {v} Φ i) ≡ ι𝔹 Φ i
 ι'𝔹∘κ'𝔹 {#} = refl
 ι'𝔹∘κ'𝔹 {♭} = refl
 {-# REWRITE ι'𝔹∘κ'𝔹 #-}
 
-_i⊥t_ : ∀{Φ T} → Abs𝔹 Φ # → AbsTm Φ T # → Set
-ai i⊥t at = at t⊥i ai
+_⊢_i⊥t_ : ∀ Φ {T} → Abs𝔹 Φ # → AbsTm Φ T # → Set
+Φ ⊢ ai i⊥t at = Φ ⊢ at t⊥i ai
 
 data Ctx : Set
 c# : Ctx → Ctx
 postulate
   c## : ∀{Γ} → c# (c# Γ) ≡ c# Γ
 {-# REWRITE c## #-}
+--AbsSub : (Φ : CtxVar) → (Γ : Ctx) → Set
 data AbsSub (Φ : CtxVar) : Ctx → Set
 
 Sub : Ctx → Ctx → Set
@@ -87,9 +113,9 @@ id Φ γ = γ
 _∘_ : ∀{Θ Δ Γ} → Sub Δ Γ → Sub Θ Δ → Sub Θ Γ
 (σ ∘ τ) Φ θ = σ Φ (τ Φ θ)
 
-_⊥i_ : ∀{Φ Γ} → (γ : AbsSub Φ Γ) → (i : Abs𝔹 Φ #) → Set
+_⊢_⊥i_ : ∀ Φ {Γ} → (γ : AbsSub Φ Γ) → (i : Abs𝔹 Φ #) → Set
 postulate
-  σ⊥i : ∀{Φ Δ Γ} → (σ : Sub Δ Γ) → (δ : AbsSub Φ Δ) → {i : Abs𝔹 Φ #} → (δ ⊥i i) → (σ Φ δ ⊥i i)
+  σ⊥i : ∀{Φ Δ Γ} → (σ : Sub Δ Γ) → (δ : AbsSub Φ Δ) → {i : Abs𝔹 Φ #} → (Φ ⊢ δ ⊥i i) → (Φ ⊢ σ Φ δ ⊥i i)
 
 Ty : Ctx → Set
 Ty Γ = (Φ : CtxVar) → (γ : AbsSub Φ (c# Γ)) → AbsTy Φ
@@ -107,21 +133,24 @@ cι : ∀{Γ} → Sub Γ (c# Γ)
 postulate
   cι# : ∀{Γ} → cι {c# Γ} ≡ id
 {-# REWRITE cι# #-}
+--AbsSub = ?
+
 data AbsSub Φ where
   • : AbsSub Φ •
   _“_^_∋_/_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (T : Ty Γ) → (v : Variance) → (t : AbsTm Φ (T Φ (cι Φ γ)) v) →
     (x : Var) → AbsSub Φ (Γ „ x ∈ T ^ v)
   _!𝔹_∋_/_&_ : {Γ : Ctx} → (γ : AbsSub Φ Γ) → (v : Variance) → (β : Abs𝔹 Φ v) → (xi : IVar) →
-    .(γ ⊥i ι'𝔹 β) → AbsSub Φ (Γ ! xi ∈𝔹 v)
+    .(Φ ⊢ γ ⊥i ι'𝔹 Φ β) → AbsSub Φ (Γ ! xi ∈𝔹 v)
+  
 cι {•} Φ • = •
-cι {Γ „ .x ∈ .T ^ .v} Φ (γ “ T ^ v ∋ t / x) = (cι Φ γ) “ T ^ # ∋ ι'atm t / x
-cι {Γ ! .xi ∈𝔹 .v} Φ (γ !𝔹 v ∋ β / xi & o) = (cι Φ γ) !𝔹 # ∋ (ι'𝔹 β) / xi & σ⊥i cι γ o
+cι {Γ „ .x ∈ .T ^ .v} Φ (γ “ T ^ v ∋ t / x) = (cι Φ γ) “ T ^ # ∋ ι'atm Φ t / x
+cι {Γ ! .xi ∈𝔹 .v} Φ (γ !𝔹 v ∋ β / xi & o) = (cι Φ γ) !𝔹 # ∋ (ι'𝔹 Φ β) / xi & σ⊥i cι γ o
 
-_⊥i_ {Γ = •} γ j = ⊤
-_⊥i_ {Γ = Γ „ .x ∈ .S ^ .v} (γ “ S ^ v ∋ as / x) aj = (γ ⊥i aj) × (ι'atm as t⊥i aj)
-_⊥i_ {Γ = Γ ! .xi ∈𝔹 .v} (γ !𝔹 v ∋ ai / xi & _) aj = (γ ⊥i aj) × (ι'𝔹 ai i⊥i aj)
+_⊢_⊥i_ Φ {Γ = •} γ j = ⊤
+_⊢_⊥i_ Φ {Γ = Γ „ .x ∈ .S ^ .v} (γ “ S ^ v ∋ as / x) aj = (Φ ⊢ γ ⊥i aj) × (Φ ⊢ ι'atm Φ as t⊥i aj)
+_⊢_⊥i_ Φ {Γ = Γ ! .xi ∈𝔹 .v} (γ !𝔹 v ∋ ai / xi & _) aj = (Φ ⊢ γ ⊥i aj) × (Φ ⊢ ι'𝔹 Φ ai i⊥i aj)
 
-⊥end : ∀{Φ Γ e} → (γ : AbsSub Φ Γ) → γ ⊥i ι𝔹 (end𝔹 e)
+⊥end : ∀{Φ Γ e} → (γ : AbsSub Φ Γ) → Φ ⊢ γ ⊥i ι𝔹 Φ (end𝔹 Φ e)
 ⊥end {Γ = •} γ = tt
 ⊥end {Φ}{Γ „ .x ∈ T ^ .v}{e} (γ “ .T ^ v ∋ t / x) = ⊥end γ , t⊥end
 ⊥end {Φ}{Γ = Γ ! .x ∈𝔹 .v}{e} (γ !𝔹 v ∋ β / x & o) = ⊥end γ , i⊥end
@@ -135,6 +164,15 @@ id∘ = refl
 ∘id = refl
 ∘∘ : ∀{Λ Θ Δ Γ} → {σ : Sub Δ Γ} → {τ : Sub Θ Δ} → {υ : Sub Λ Θ} → (σ ∘ τ) ∘ υ ≡ σ ∘ (τ ∘ υ)
 ∘∘ = refl
+
+--=================================
+--FUNCTORIALITY OF #
+--=================================
+
+AbsSub♭ : ∀{Φ Γ} → AbsSub (cv♭ Φ) Γ ≡ AbsSub Φ (c# Γ)
+AbsSub♭ {Φ}{•} = {!!}
+AbsSub♭ {Φ}{Γ „ x ∈ T ^ v} = {!!}
+AbsSub♭ {Φ}{Γ ! x ∈𝔹 v} = {!!}
 
 postulate
   sub# : ∀{Δ Γ} → Sub Δ Γ → Sub (c# Δ) (c# Γ)
@@ -159,10 +197,13 @@ T[][] = refl
 --================================
 --TERMS AND SUBSTITUTION EXTENSION
 --================================
-infix 5 _⊢_^_
+infix 5 _⊢_^_ _⊢𝔹_
 _⊢_^_ : (Γ : Ctx) → Ty Γ → Variance → Set -- set of terms of T v
 Γ ⊢ T ^ v = (Φ : CtxVar) → (γ : AbsSub Φ Γ) → AbsTm Φ (T Φ (cι Φ γ)) v
 --Think of this as Γ ⊢ T = ∀ Ω . (γ : Sub Ω Γ) → Ω ⊢ T[γ]
+
+_⊢𝔹_ : (Γ : Ctx) → (v : Variance) → Set
+Γ ⊢𝔹 v = (Φ : CtxVar) → (γ : AbsSub Φ Γ) → Abs𝔹 Φ v
 
 _∋_[_] : ∀{v Δ Γ} → (T : Ty Γ) → (Γ ⊢ T ^ v) → (σ : Sub Δ Γ) → (Δ ⊢ T T[ σ ] ^ v)
 T ∋ t [ σ ] = λ Φ δ → t Φ (σ Φ δ)
@@ -173,19 +214,26 @@ T ∋ t [ σ ] = λ Φ δ → t Φ (σ Φ δ)
 [][] = refl
 infix 10 _∋_[_]
 
+{-
+postulate
+  --semantically, this is just _#. THIS DOESN'T HELP
+  t# : ∀{Γ T v} → (t : Γ ⊢ T ^ v) → c# Γ ⊢ T ^ #
+  i# : ∀{Γ v} → (i : Γ ⊢𝔹 v) → c# Γ ⊢𝔹 #
+-}
+
 infix 10 _„_^_∋_/_ _!𝔹_∋_/_
 _„_^_∋_/_ : ∀ {Δ Γ} → (σ : Sub Δ Γ) → (T : Ty Γ) → (v : Variance) →  Δ ⊢ T T[ σ ] ^ v → (x : Var) → Sub Δ (Γ „ x ∈ T ^ v)
 (σ „ T ^ v ∋ t / x) Φ δ = (σ Φ δ) “ T ^ v ∋ (t Φ δ) / x
 
 _!𝔹_∋_/_ : ∀ {Δ Γ} → (σ : Sub Δ Γ) → (v : Variance) → (e : Endpoint) → (xi : IVar) → Sub Δ (Γ ! xi ∈𝔹 v)
-(σ !𝔹 ♭ ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 ♭ ∋ κ'𝔹 (end𝔹 e) / xi & ⊥end (σ Φ δ)
-(σ !𝔹 # ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 # ∋ κ'𝔹 (end𝔹 e) / xi & ⊥end (σ Φ δ)
+(σ !𝔹 ♭ ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 ♭ ∋ κ'𝔹 Φ (end𝔹 Φ e) / xi & ⊥end (σ Φ δ)
+(σ !𝔹 # ∋ e / xi) Φ δ = (σ Φ δ) !𝔹 # ∋ κ'𝔹 Φ (end𝔹 Φ e) / xi & ⊥end (σ Φ δ)
 
 _!id : ∀{v Δ Γ xi} → (σ : Sub Δ Γ) → Sub (Δ ! xi ∈𝔹 v) (Γ ! xi ∈𝔹 v)
 (σ !id) Φ (δ !𝔹 v ∋ i / xi & o) = (σ Φ δ) !𝔹 v ∋ i / xi & σ⊥i σ δ o
 
 _!u : ∀{Δ Γ xi} → (σ : Sub Δ Γ) → Sub (Δ ! xi ∈𝔹 ♭) (Γ ! xi ∈𝔹 #)
-(σ !u) Φ (δ !𝔹 .♭ ∋ i / xi & o) = (σ Φ δ) !𝔹 # ∋ ι𝔹 i / xi & σ⊥i σ δ o
+(σ !u) Φ (δ !𝔹 .♭ ∋ i / xi & o) = (σ Φ δ) !𝔹 # ∋ ι𝔹 Φ i / xi & σ⊥i σ δ o
 
 --==================================
 --FLAT
@@ -204,9 +252,10 @@ postulate
   cι∘cκ : ∀{Γ Φ} → {γ : AbsSub Φ (c♭ Γ)} → cι Φ (cκ{Γ} Φ γ) ≡ cι Φ γ
 {-# REWRITE cι∘cκ #-}
 cκ {•} Φ • = •
-cκ {Γ „ .x ∈ .T ^ v} Φ (γ “ T ^ .♭ ∋ t / x) = (cκ Φ γ) “ T ^ v ∋ κ'atm t / x
-cκ {Γ ! .xi ∈𝔹 v} Φ (γ !𝔹 .♭ ∋ β / xi & o) = (cκ Φ γ) !𝔹 v ∋ (κ'𝔹 β) / xi & σ⊥i cκ γ o
+cκ {Γ „ .x ∈ .T ^ v} Φ (γ “ T ^ .♭ ∋ t / x) = (cκ Φ γ) “ T ^ v ∋ κ'atm Φ t / x
+cκ {Γ ! .xi ∈𝔹 v} Φ (γ !𝔹 .♭ ∋ β / xi & o) = (cκ Φ γ) !𝔹 v ∋ (κ'𝔹 Φ β) / xi & σ⊥i cκ γ o
 
+{- DO WE NEED THIS? WE WILL!
 postulate
   sub♭ : ∀{Δ Γ} → Sub Δ Γ → Sub (c♭ Δ) (c♭ Γ)
   sub♭-id : ∀{Γ Φ} → {γ : AbsSub Φ (c♭ Γ)} → sub♭ id Φ γ ≡ γ
@@ -216,6 +265,7 @@ postulate
 {-# REWRITE sub♭-id #-}
 {-# REWRITE sub♭-∘ #-}
 --{-# REWRITE cκ-nat #-}
+-}
 
 --=====================================
 --Universe
